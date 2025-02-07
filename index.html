@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>回転寿司 勘定アプリ</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 400px; margin: auto; text-align: center; }
+        button { margin-left: 10px; }
+        ul { list-style: none; padding: 0; }
+        li { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>回転寿司 勘定アプリ</h1>
+    
+    <h2>食べる人を追加</h2>
+    <input type="text" id="newPersonInput" placeholder="名前を入力">
+    <button onclick="addPerson()">追加</button>
+    <ul id="personList"></ul>
+    
+    <h2>皿の追加</h2>
+    <input type="number" id="priceInput" placeholder="皿の値段を入力">
+    <select id="personSelect"></select>
+    <button onclick="addPlate()">追加</button>
+    
+    <h2>食べた皿一覧</h2>
+    <ul id="plateList"></ul>
+    
+    <h2>合計: <span id="totalAmount">0</span>円</h2>
+    <h2>皿の枚数: <span id="plateCount">0</span>枚</h2>
+    
+    <h2>個人ごとの合計</h2>
+    <ul id="individualTotals"></ul>
+
+    <script>
+        let people = JSON.parse(localStorage.getItem("sushiPeople")) || [];
+        let plates = JSON.parse(localStorage.getItem("sushiPlates")) || [];
+
+        function updatePersonUI() {
+            const personList = document.getElementById("personList");
+            const personSelect = document.getElementById("personSelect");
+            
+            personList.innerHTML = "";
+            personSelect.innerHTML = "";
+            
+            people.forEach((person, index) => {
+                const li = document.createElement("li");
+                li.innerHTML = `${person} <button onclick="removePerson(${index})">削除</button>`;
+                personList.appendChild(li);
+                
+                const option = document.createElement("option");
+                option.value = person;
+                option.textContent = person;
+                personSelect.appendChild(option);
+            });
+            
+            localStorage.setItem("sushiPeople", JSON.stringify(people));
+        }
+
+        function addPerson() {
+            const newPersonInput = document.getElementById("newPersonInput");
+            const name = newPersonInput.value.trim();
+            
+            if (name !== "" && !people.includes(name)) {
+                people.push(name);
+                newPersonInput.value = "";
+                updatePersonUI();
+            }
+        }
+
+        function removePerson(index) {
+            people.splice(index, 1);
+            updatePersonUI();
+        }
+
+        function updatePlateUI() {
+            const plateList = document.getElementById("plateList");
+            const totalAmount = document.getElementById("totalAmount");
+            const plateCount = document.getElementById("plateCount");
+            const individualTotals = document.getElementById("individualTotals");
+            
+            plateList.innerHTML = "";
+            individualTotals.innerHTML = "";
+            let total = 0;
+            let personTotals = {};
+            let personPlateCounts = {};
+
+            plates.forEach((plate, index) => {
+                total += plate.price;
+                if (!personTotals[plate.person]) {
+                    personTotals[plate.person] = 0;
+                    personPlateCounts[plate.person] = 0;
+                }
+                personTotals[plate.person] += plate.price;
+                personPlateCounts[plate.person] += 1;
+                
+                const li = document.createElement("li");
+                li.innerHTML = `${plate.person}: ${plate.price}円 <button onclick="removePlate(${index})">削除</button>`;
+                plateList.appendChild(li);
+            });
+            
+            totalAmount.textContent = total;
+            plateCount.textContent = plates.length;
+            
+            for (const person in personTotals) {
+                const li = document.createElement("li");
+                li.textContent = `${person}: ${personTotals[person]}円 (${personPlateCounts[person]}枚)`;
+                individualTotals.appendChild(li);
+            }
+            
+            localStorage.setItem("sushiPlates", JSON.stringify(plates));
+        }
+
+        function addPlate() {
+            const priceInput = document.getElementById("priceInput");
+            const personSelect = document.getElementById("personSelect");
+            const price = parseInt(priceInput.value, 10);
+            const person = personSelect.value;
+            
+            if (!isNaN(price) && price > 0 && person !== "") {
+                plates.push({ price, person });
+                priceInput.value = "";
+                updatePlateUI();
+            }
+        }
+
+        function removePlate(index) {
+            plates.splice(index, 1);
+            updatePlateUI();
+        }
+
+        window.onload = function() {
+            updatePersonUI();
+            updatePlateUI();
+        };
+    </script>
+</body>
+</html>
